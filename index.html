@@ -118,9 +118,14 @@
   <img src="https://i.ibb.co/27mPdcmS/ipadressescanner.png" alt="Analyseur d'adresse IP" style="max-width: 45%; height: auto; margin-left: 9%;">
 </body>
 
-  <p>Entrez une adresse IP :</p>
-  <input type="text" id="ipInput" placeholder="Ex: 8.8.8.8">
+<p>Entrez une adresse IP :</p>
+<input type="text" id="ipInput" placeholder="Ex: 8.8.8.8">
+
+<div class="button-row">
   <button onclick="analyserIP()">Analyser</button>
+  <button onclick="mesInfos()">Mes infos</button>
+</div>
+
 
   <!-- Ajout de la roue de chargement -->
   <div id="spinner" class="spinner"></div>
@@ -198,6 +203,71 @@ spinner.style.display = "none";  // Masquer la roue après la réponse
       spinner.style.display = "none";  // Masquer la roue en cas d'erreur
     }
   }
+
+async function mesInfos() {
+  const resultat = document.getElementById("resultat");
+  const spinner = document.getElementById("spinner");
+
+  resultat.classList.remove("show");
+  resultat.classList.add("fade-in");
+  spinner.style.display = "block";
+
+  // Animation de chargement
+  let i = 0;
+  resultat.textContent = "Récupération de vos infos";
+  const dots = setInterval(() => {
+    resultat.textContent += ".";
+    i++;
+    if (i === 3) {
+      resultat.textContent = "Récupération de vos infos";
+      i = 0;
+    }
+  }, 500);
+
+  const start = Date.now();
+
+  try {
+    // On récupère d'abord l'IP de l'utilisateur
+    const ipRes = await fetch("https://api.ipify.org?format=json");
+    const ipData = await ipRes.json();
+    const ip = ipData.ip;
+
+    // Puis on fait l'analyse IP
+    const response = await fetch(`https://ipwho.is/${ip}`);
+    const data = await response.json();
+
+    const elapsed = Date.now() - start;
+    const delay = Math.max(0, 1500 - elapsed);
+
+    setTimeout(() => {
+      clearInterval(dots);
+
+      if (data.success) {
+        let resultatText = 
+          `<span class="label">          Votre IP :</span> ${ip}  
+          <span class="label">Fournisseur :</span> ${data.connection?.isp || "Inconnu"} 
+          <span class="label">Ville :</span> ${data.city}  
+          <span class="label">Région :</span> ${data.region}  
+          <span class="label">Pays :</span> ${data.country}  
+          <span class="label">VPN/Proxy détecté :</span> ${data.proxy ? "Oui" : "Non"}`;
+
+        resultat.innerHTML = resultatText;
+      } else {
+        resultat.textContent = "Impossible de récupérer vos informations.";
+      }
+
+      resultat.classList.add("show");
+      spinner.style.display = "none";
+    }, delay);
+
+  } catch (error) {
+    clearInterval(dots);
+    resultat.textContent = "Erreur : " + error.message;
+    resultat.classList.add("show");
+    spinner.style.display = "none";
+  }
+}
+
 </script>
 
 </body>
