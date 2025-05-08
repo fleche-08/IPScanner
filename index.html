@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Analyseur d'adresse IP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+  <style>
+    .fade-in {
+      opacity: 0;
+      transition: opacity 1s ease-in;
+    }
+
+    .fade-in.show {
+      opacity: 1;
+    }
+
+    body {
+      background-color: #0a0a0a;
+      color: #c0ffc0;
+      font-family: 'Fira Code', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #99ff99;
+    }
+
+    p {
+      margin-bottom: 0.5rem;
+      color: #aaaaaa;
+    }
+
+    input {
+      background-color: #1a1a1a;
+      border: 1px solid #444;
+      padding: 0.5rem 1rem;
+      color: #c0ffc0;
+      font-family: inherit;
+      font-size: 1rem;
+      border-radius: 4px;
+      width: 250px;
+      transition: border 0.2s;
+    }
+
+    input:focus {
+      border-color: #88ff88;
+      outline: none;
+    }
+
+    button {
+      margin-top: 1rem;
+      padding: 0.5rem 1.2rem;
+      background-color: #111;
+      color: #99ff99;
+      border: 1px solid #444;
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s, border 0.2s;
+    }
+
+    button:hover {
+      background-color: #1f1f1f;
+      border-color: #88ff88;
+    }
+
+    pre {
+      margin-top: 2rem;
+      background-color: #111;
+      padding: 1rem;
+      border-left: 4px solid #88ff88;
+      color: #c0ffc0;
+      max-width: 600px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Nouveau style pour les labels */
+    .label {
+      color: #88ff88;
+      font-weight: bold;
+    }
+
+    /* Pour les informations dans le résultat, tout sera sur une seule ligne */
+    #resultat {
+      word-wrap: break-word;
+      max-width: 100%;
+      display: block;
+    }
+
+    /* Styles de la roue de chargement (spinner) */
+    .spinner {
+      border: 4px solid #1a1a1a; /* Fond noir */
+      border-top: 4px solid #88ff88; /* Partie tournante verte */
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-top: 1rem;  /* Espacement avec le bouton */
+      display: none;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+  </style>
+</head>
+<body>
+  <img src="https://i.ibb.co/0pzWkYGh/ipadressescanner.png" alt="Analyseur d'adresse IP" style="max-width: 65%; height: auto; margin-left: 12%;">
+</body>
+
+  <p>Entrez une adresse IP :</p>
+  <input type="text" id="ipInput" placeholder="Ex: 8.8.8.8">
+  <button onclick="analyserIP()">Analyser</button>
+
+  <!-- Ajout de la roue de chargement -->
+  <div id="spinner" class="spinner"></div>
+
+  <pre id="resultat" class="fade-in">En attente d'analyse...</pre>
+
+<script>
+  async function analyserIP() {
+    const ip = document.getElementById("ipInput").value.trim();
+    const resultat = document.getElementById("resultat");
+    const spinner = document.getElementById("spinner");
+
+    // Réinitialise l'état de l'animation
+    resultat.classList.remove("show");
+    resultat.classList.add("fade-in");
+    spinner.style.display = "block";  // Afficher la roue
+
+    if (!ip) {
+      resultat.textContent = "Veuillez entrer une adresse IP.";
+      resultat.classList.add("show");
+      spinner.style.display = "none"; // Masquer la roue de chargement
+      return;
+    }
+
+    // Animation de chargement
+    let i = 0;
+    resultat.textContent = "Analyse en cours";
+    const dots = setInterval(() => {
+      resultat.textContent += ".";
+      i++;
+      if (i === 3) {
+        resultat.textContent = "Analyse en cours";
+        i = 0;
+      }
+    }, 500);
+
+    const start = Date.now();
+
+    try {
+      const response = await fetch(`https://ipwho.is/${ip}`);
+      const data = await response.json();
+
+      const elapsed = Date.now() - start;
+      const delay = Math.max(0, 1500 - elapsed); // minimum 1.5s total
+
+      setTimeout(() => {
+        clearInterval(dots);
+
+if (data.success) { // Vérifie si la réponse est valide
+  let resultatText = 
+    `<span class="label">    Analyse de :</span> ${ip}  
+    <span class="label">Fournisseur :</span> ${data.connection?.isp || "Inconnu"} 
+    <span class="label">Ville :</span> ${data.city}  
+    <span class="label">Région :</span> ${data.region}  
+    <span class="label">Pays :</span> ${data.country}  
+    <span class="label">VPN/Proxy détecté :</span> ${data.proxy ? "Oui" : "Non"}`;
+
+  resultat.innerHTML = resultatText;
+} else {
+  resultat.textContent = "Adresse IP invalide ou non trouvée.";
+}
+
+resultat.classList.add("show");
+spinner.style.display = "none";  // Masquer la roue après la réponse
+
+
+        resultat.classList.add("show");
+        spinner.style.display = "none";  // Masquer la roue après la réponse
+      }, delay);
+
+    } catch (error) {
+      clearInterval(dots);
+      resultat.textContent = "Erreur : " + error.message;
+      resultat.classList.add("show");
+      spinner.style.display = "none";  // Masquer la roue en cas d'erreur
+    }
+  }
+</script>
+
+</body>
+</html>
